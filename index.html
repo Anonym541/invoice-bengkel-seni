@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Input Invoice - Bengkel Seni</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-5 font-sans">
+    <div class="max-w-3xl mx-auto bg-white p-8 rounded-2xl shadow-lg border border-gray-200">
+        <div class="text-center mb-8">
+            <h2 class="text-3xl font-extrabold text-gray-800 tracking-tighter uppercase">Bengkel Seni <span class="text-indigo-600">Invoice</span></h2>
+            <p class="text-gray-400 text-xs mt-1 italic">"Sekaya-kayanya orang adalah seniman, Bengkel Seni keluarga kita"</p>
+        </div>
+
+        <form th:action="@{/simpan}" method="post" class="space-y-5" id="invoiceForm">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Nama Penyewa</label>
+                    <input type="text" name="penyewa" class="w-full border-gray-300 border p-3 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none uppercase font-bold" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">No. HP / WhatsApp UKM</label>
+                    <input type="text" name="noHp" class="w-full border-gray-300 border p-3 rounded-lg shadow-sm" placeholder="0812xxxx">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1 italic text-indigo-600">Pilih Salah Satu (UKM/Prodi):</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" name="namaUkm" class="w-full border-gray-300 border p-3 rounded-lg text-xs" placeholder="Isi Nama UKM">
+                        <input type="text" name="prodi" class="w-full border-gray-300 border p-3 rounded-lg text-xs" placeholder="Isi Nama Prodi">
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-gray-100">
+
+            <div id="container-barang" class="space-y-3">
+                <label class="block text-sm font-bold text-gray-800 uppercase tracking-widest text-[10px]">Daftar Alat Seni</label>
+                <div class="flex gap-2 item-barang">
+                    <input type="text" placeholder="Nama Barang" class="w-2/3 border p-2 rounded-lg input-nama" required>
+                    <input type="number" placeholder="Harga" class="w-1/3 border p-2 rounded-lg input-harga" oninput="hitungTotal()" required>
+                    <button type="button" onclick="hapusBaris(this)" class="text-red-500 font-bold px-2">✕</button>
+                </div>
+            </div>
+            
+            <button type="button" onclick="tambahBaris()" class="text-[10px] bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-md font-bold text-gray-600">
+                + TAMBAH BARANG
+            </button>
+
+            <input type="hidden" name="barang" id="hiddenBarang">
+            <input type="hidden" name="totalHarga" id="totalHargaHidden">
+
+            <div class="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
+                <div>
+                    <label class="block text-xs font-black text-gray-500 uppercase">Total Tagihan</label>
+                    <input type="text" id="totalHargaDisplay" class="w-full bg-gray-50 border-none p-2 rounded-lg font-black text-xl text-indigo-700" readonly value="0">
+                </div>
+                <div>
+                    <label class="block text-xs font-black text-orange-500 uppercase">DP Dibayar</label>
+                    <input type="number" id="dpField" name="dp" class="w-full border-orange-200 border p-2 rounded-lg font-bold" value="0" oninput="cekStatus()">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-700">Status</label>
+                    <select name="status" id="statusBayar" class="w-full border p-2 rounded-lg text-sm" onchange="cekStatus()">
+                        <option value="Belum Lunas">Belum Lunas</option>
+                        <option value="DP">DP</option>
+                        <option value="Lunas">Lunas</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700">Metode</label>
+                    <select name="metodePembayaran" class="w-full border p-2 rounded-lg text-sm">
+                        <option value="Tunai">Tunai</option>
+                        <option value="Transfer Bank">Transfer Bank</option>
+                        <option value="QRIS">QRIS</option>
+                    </select>
+                </div>
+            </div>
+
+            <button type="submit" onclick="prepareData(event)" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-indigo-700 shadow-lg transition transform active:scale-95 uppercase">
+                Simpan Transaksi
+            </button>
+        </form>
+
+        <div class="mt-12 border-t-2 border-dashed pt-8">
+            <h3 class="font-black text-gray-800 mb-4 uppercase tracking-widest text-sm text-center">Riwayat Invoice</h3>
+            <div class="overflow-x-auto rounded-xl border border-gray-200">
+                <table class="w-full text-sm text-left">
+                    <thead class="bg-gray-50 border-b">
+                        <tr>
+                            <th class="p-4 font-bold text-gray-600">Penyewa</th>
+                            <th class="p-4 font-bold text-gray-600">Status</th>
+                            <th class="p-4 font-bold text-gray-600 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="inv : ${invoices}" class="border-b last:border-0 hover:bg-gray-50 transition">
+    <td class="p-4">
+        <div class="font-bold text-gray-800 uppercase" th:text="${inv.penyewa}"></div>
+        <div class="text-[10px] text-gray-400" th:text="${inv.tanggalWaktu}"></div>
+    </td>
+    <td class="p-4">
+        <span th:text="${inv.status}" 
+              th:classappend="${inv.status == 'Lunas' ? 'text-green-600 bg-green-50 border-green-200' : 'text-red-600 bg-red-50 border-red-200'}"
+              class="px-3 py-1 rounded-full font-black text-[10px] uppercase border">
+        </span>
+    </td>
+    <td class="p-4 text-center">
+        <a th:href="@{'/cetak/' + ${inv.id}}" target="_blank" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-indigo-700 transition shadow-sm">
+            CETAK NOTA
+        </a>
+    </td>
+</tr>
+                        <tr th:if="${#lists.isEmpty(invoices)}">
+                            <td colspan="3" class="p-8 text-center text-gray-400 italic">Belum ada riwayat transaksi.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="mt-10 text-center text-[10px] text-gray-400">
+            Invoice created by: <span class="font-bold text-gray-600 tracking-widest">ROSA APRILIA JAYA</span>
+        </div>
+    </div>
+
+    <script>
+        function tambahBaris() {
+            const container = document.getElementById('container-barang');
+            const div = document.createElement('div');
+            div.className = 'flex gap-2 item-barang mt-2';
+            div.innerHTML = `<input type="text" placeholder="Nama Barang" class="w-2/3 border p-2 rounded-lg input-nama" required>
+                             <input type="number" placeholder="Harga" class="w-1/3 border p-2 rounded-lg input-harga" oninput="hitungTotal()" required>
+                             <button type="button" onclick="hapusBaris(this)" class="text-red-500 font-bold px-2">✕</button>`;
+            container.appendChild(div);
+        }
+
+        function hapusBaris(btn) {
+            const items = document.querySelectorAll('.item-barang');
+            if (items.length > 1) { btn.parentElement.remove(); hitungTotal(); }
+        }
+
+        function hitungTotal() {
+            let total = 0;
+            document.querySelectorAll('.input-harga').forEach(input => { total += Number(input.value) || 0; });
+            document.getElementById('totalHargaDisplay').value = total.toLocaleString('id-ID');
+            document.getElementById('totalHargaHidden').value = total;
+            cekStatus(); 
+        }
+
+        function cekStatus() {
+            const status = document.getElementById('statusBayar').value;
+            const total = document.getElementById('totalHargaHidden').value;
+            const dpField = document.getElementById('dpField');
+            if (status === 'Lunas') {
+                dpField.value = total;
+                dpField.readOnly = true; 
+                dpField.classList.add('bg-gray-100');
+            } else {
+                dpField.readOnly = false; 
+                dpField.classList.remove('bg-gray-100');
+            }
+        }
+
+        function prepareData(event) {
+            let daftarBarang = [];
+            document.querySelectorAll('.item-barang').forEach(item => {
+                const nama = item.querySelector('.input-nama').value;
+                const harga = item.querySelector('.input-harga').value;
+                if(nama) daftarBarang.push(nama + " (Rp " + Number(harga).toLocaleString('id-ID') + ")");
+            });
+            document.getElementById('hiddenBarang').value = daftarBarang.join(", ");
+        }
+    </script>
+</body>
+</html>
